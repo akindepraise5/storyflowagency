@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storyflow Agency</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Framer Motion -->
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap"
+        rel="stylesheet">
+
+    <style>
+        .font-serif {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .font-sans {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Film Grain Texture */
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+
+<body class="bg-[#FDFCF8]">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { motion, useScroll, useTransform, useSpring, AnimatePresence } = window.Motion;
+
+        // --- INLINE ICONS ---
+        const IconWrapper = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const ArrowRight = (props) => (<IconWrapper {...props}><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></IconWrapper>);
+        const Menu = (props) => (<IconWrapper {...props}><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></IconWrapper>);
+        const X = (props) => (<IconWrapper {...props}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></IconWrapper>);
+        const Instagram = (props) => (<IconWrapper {...props}><rect width="20" height="20" x="2" y="2" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" x2="17.51" y1="6.5" y2="6.5" /></IconWrapper>);
+        const Linkedin = (props) => (<IconWrapper {...props}><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" /><rect width="4" height="12" x="2" y="9" /><circle cx="4" cy="4" r="2" /></IconWrapper>);
+        const Twitter = (props) => (<IconWrapper {...props}><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z" /></IconWrapper>);
+
+        // --- SUBCOMPONENTS ---
+
+        const RevealText = ({ children, delay = 0 }) => (
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.8, delay: delay, ease: [0.22, 1, 0.36, 1] }}>{children}</motion.div>
+        );
+
+        const ParallaxImage = ({ src, alt }) => {
+            const ref = useRef(null);
+            const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+            const y = useTransform(scrollYProgress, [0, 1], ["-10%", "10%"]);
+            return (
+                <div ref={ref} className="w-full h-full relative overflow-hidden bg-stone-200">
+                    <motion.img style={{ y, scale: 1.1 }} src={src} alt={alt} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/10" />
+                </div>
+            );
+        };
+
+        const ServiceCard = ({ title, desc }) => (
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="group cursor-default py-6 md:py-0">
+                <h3 className="font-serif text-2xl mb-3 text-white group-hover:text-stone-300 transition-colors">{title}</h3>
+                <p className="font-light opacity-50 group-hover:opacity-80 transition-opacity leading-relaxed max-w-xs">{desc}</p>
+            </motion.div>
+        );
+
+        const MenuOverlay = ({ isOpen, setIsMenuOpen, navigateTo }) => (
+            <motion.div initial={{ opacity: 0, pointerEvents: 'none' }} animate={{ opacity: isOpen ? 1 : 0, pointerEvents: isOpen ? 'auto' : 'none' }} transition={{ duration: 0.4 }} className="fixed inset-0 bg-[#FDFCF8] z-30 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-8 md:gap-12">
+                    <motion.button onClick={() => navigateTo('home')} initial={{ y: 40, opacity: 0 }} animate={{ y: isOpen ? 0 : 40, opacity: isOpen ? 1 : 0 }} transition={{ delay: 0.1, duration: 0.6 }} className="font-serif text-4xl md:text-6xl hover:italic hover:opacity-50 transition-all text-[#1A1A1A]">Home</motion.button>
+                    <motion.button onClick={() => navigateTo('services')} initial={{ y: 40, opacity: 0 }} animate={{ y: isOpen ? 0 : 40, opacity: isOpen ? 1 : 0 }} transition={{ delay: 0.2, duration: 0.6 }} className="font-serif text-4xl md:text-6xl hover:italic hover:opacity-50 transition-all text-[#1A1A1A]">The Ecosystem</motion.button>
+                    <motion.button onClick={() => navigateTo('philosophy')} initial={{ y: 40, opacity: 0 }} animate={{ y: isOpen ? 0 : 40, opacity: isOpen ? 1 : 0 }} transition={{ delay: 0.3, duration: 0.6 }} className="font-serif text-4xl md:text-6xl hover:italic hover:opacity-50 transition-all text-[#1A1A1A]">Philosophy</motion.button>
+                    <motion.button onClick={() => navigateTo('contact')} initial={{ y: 40, opacity: 0 }} animate={{ y: isOpen ? 0 : 40, opacity: isOpen ? 1 : 0 }} transition={{ delay: 0.4, duration: 0.6 }} className="font-serif text-4xl md:text-6xl hover:italic hover:opacity-50 transition-all text-[#1A1A1A]">Contact</motion.button>
+
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: isOpen ? 1 : 0 }} transition={{ delay: 0.6 }} className="flex gap-8 mt-12 text-[#1A1A1A]">
+                        <Instagram className="cursor-pointer hover:opacity-50 transition-opacity" />
+                        <Linkedin className="cursor-pointer hover:opacity-50 transition-opacity" />
+                        <Twitter className="cursor-pointer hover:opacity-50 transition-opacity" />
+                    </motion.div>
+                </div>
+            </motion.div>
+        );
+
+        const ValueSection = ({ number, title, desc }) => (
+            <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8 }}
+                className="flex flex-col md:flex-row gap-8 md:gap-24 border-t border-black/5 pt-12"
+            >
+                <span className="text-sm font-bold opacity-30">({number})</span>
+                <div className="max-w-4xl">
+                    <h3 className="font-serif text-4xl md:text-6xl mb-6">{title}</h3>
+                    <p className="text-xl font-light opacity-70 leading-relaxed max-w-2xl">{desc}</p>
+                </div>
+            </motion.div>
+        );
+
+        const ServiceItem = ({ service, index, onHover }) => {
+            return (
+                <motion.div
+                    initial={{ y: 40, opacity: 0 }}
+                    whileInView={{ y: 0, opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1, duration: 0.8 }}
+                    onMouseEnter={onHover}
+                    className="flex flex-col gap-6 py-12 border-b border-black/5 group hover:bg-[#F5F5F0] transition-colors duration-500 -mx-6 px-6 rounded-lg cursor-default"
+                >
+                    {/* Mobile Only Image - Visible only on LG screens and below */}
+                    <div className="lg:hidden w-full aspect-video overflow-hidden rounded-sm mb-2">
+                        <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
+                    </div>
+
+                    <div className="flex justify-between items-start">
+                        <div className="text-xs font-bold border border-black/20 rounded-full w-8 h-8 flex items-center justify-center">
+                            {service.id}
+                        </div>
+                        <h3 className="font-serif text-3xl md:text-4xl flex-1 ml-6">{service.title}</h3>
+                    </div>
+
+                    <div className="pl-14">
+                        <p className="font-sans text-sm uppercase tracking-widest opacity-50 mb-4">{service.tagline}</p>
+                        <p className="font-light leading-relaxed text-[#1A1A1A]/80 mb-6 max-w-md">
+                            {service.description}
+                        </p>
+                        <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {service.deliverables.map((item, i) => (
+                                <li key={i} className="flex items-center gap-2 text-sm opacity-70">
+                                    <div className="w-1 h-1 bg-black rounded-full"></div>
+                                    {item}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </motion.div>
+            )
+        }
+
+        // --- PAGES ---
+
+        const ContactPage = () => {
+            const [formState, setFormState] = useState({ name: '', email: '', brand: '', message: '' });
+            const [status, setStatus] = useState('idle');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setStatus('sending');
+                // Simulate API call
+                setTimeout(() => {
+                    setStatus('success');
+                }, 1500);
+            };
+
+            const handleChange = (e) => {
+                setFormState({ ...formState, [e.target.name]: e.target.value });
+            };
+
+            return (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="pt-32 px-6 md:px-12 max-w-7xl mx-auto pb-24"
+                >
+                    <div className="mb-24 border-b border-black/10 pb-12">
+                        <motion.h1
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ duration: 0.8 }}
+                            className="font-serif text-5xl md:text-8xl mb-8"
+                        >
+                            Let's talk.
+                        </motion.h1>
+                        <motion.p
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.2, duration: 0.8 }}
+                            className="text-xl md:text-2xl font-light max-w-2xl leading-relaxed text-[#1A1A1A]/80"
+                        >
+                            Ready to find your flow? Tell us about your vision.
+                        </motion.p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
+                        {/* Left: Contact Info */}
+                        <div className="md:col-span-4 space-y-12">
+                            <RevealText>
+                                <div>
+                                    <h3 className="font-serif text-2xl mb-4">New Business</h3>
+                                    <p className="opacity-60 text-lg hover:opacity-100 transition-opacity"><a href="mailto:growth@storyflow.com">growth@storyflow.com</a></p>
+                                </div>
+                            </RevealText>
+
+                            <RevealText delay={0.1}>
+                                <div>
+                                    <h3 className="font-serif text-2xl mb-4">General Inquiries</h3>
+                                    <p className="opacity-60 text-lg hover:opacity-100 transition-opacity"><a href="mailto:hello@storyflow.com">hello@storyflow.com</a></p>
+                                </div>
+                            </RevealText>
+
+                            <RevealText delay={0.2}>
+                                <div>
+                                    <h3 className="font-serif text-2xl mb-4">Studios</h3>
+                                    <p className="opacity-60 leading-relaxed">
+                                        London — Shoreditch<br />
+                                        New York — SoHo<br />
+                                        Lagos — VI
+                                    </p>
+                                </div>
+                            </RevealText>
+                        </div>
+
+                        {/* Right: Form */}
+                        <div className="md:col-span-8">
+                            {status === 'success' ? (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="bg-[#F5F5F0] p-12 rounded-lg text-center"
+                                >
+                                    <h3 className="font-serif text-3xl mb-4">Message Received.</h3>
+                                    <p className="opacity-60 text-lg">Thank you for reaching out. A strategist will be in touch shortly.</p>
+                                </motion.div>
+                            ) : (
+                                <form onSubmit={handleSubmit} className="space-y-12">
+                                    <RevealText delay={0.3}>
+                                        <div className="space-y-2">
+                                            <label className="text-xs uppercase tracking-widest opacity-50 ml-1">Your Name</label>
+                                            <input
+                                                type="text"
+                                                name="name"
+                                                required
+                                                value={formState.name}
+                                                onChange={handleChange}
+                                                className="w-full bg-transparent border-b border-black/20 py-4 text-xl md:text-2xl font-light focus:outline-none focus:border-black transition-colors placeholder:opacity-20"
+                                                placeholder="Enter your name"
+                                            />
+                                        </div>
+                                    </RevealText>
+
+                                    <RevealText delay={0.4}>
+                                        <div className="space-y-2">
+                                            <label className="text-xs uppercase tracking-widest opacity-50 ml-1">Email Address</label>
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                required
+                                                value={formState.email}
+                                                onChange={handleChange}
+                                                className="w-full bg-transparent border-b border-black/20 py-4 text-xl md:text-2xl font-light focus:outline-none focus:border-black transition-colors placeholder:opacity-20"
+                                                placeholder="Enter your email"
+                                            />
+                                        </div>
+                                    </RevealText>
+
+                                    <RevealText delay={0.5}>
+                                        <div className="space-y-2">
+                                            <label className="text-xs uppercase tracking-widest opacity-50 ml-1">Brand / Company</label>
+                                            <input
+                                                type="text"
+                                                name="brand"
+                                                value={formState.brand}
+                                                onChange={handleChange}
+                                                className="w-full bg-transparent border-b border-black/20 py-4 text-xl md:text-2xl font-light focus:outline-none focus:border-black transition-colors placeholder:opacity-20"
+                                                placeholder="Enter brand name"
+                                            />
+                                        </div>
+                                    </RevealText>
+
+                                    <RevealText delay={0.6}>
+                                        <div className="space-y-2">
+                                            <label className="text-xs uppercase tracking-widest opacity-50 ml-1">The Goal</label>
+                                            <textarea
+                                                name="message"
+                                                required
+                                                value={formState.message}
+                                                onChange={handleChange}
+                                                rows="3"
+                                                className="w-full bg-transparent border-b border-black/20 py-4 text-xl md:text-2xl font-light focus:outline-none focus:border-black transition-colors resize-none placeholder:opacity-20"
+                                                placeholder="Tell us a bit about what you're looking to build..."
+                                            />
+                                        </div>
+                                    </RevealText>
+
+                                    <div className="pt-8">
+                                        <button
+                                            type="submit"
+                                            disabled={status === 'sending'}
+                                            className="group relative inline-flex items-center gap-4 text-xl md:text-2xl font-light border-b border-black pb-2 hover:opacity-70 transition-all disabled:opacity-50"
+                                        >
+                                            {status === 'sending' ? 'Sending...' : 'Send Request'}
+                                            <ArrowRight className="w-6 h-6 transform group-hover:translate-x-2 transition-transform duration-300" />
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
+            )
+        }
+
+        const PhilosophyPage = ({ navigateTo }) => {
+            return (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="pt-32 px-6 md:px-12 max-w-7xl mx-auto pb-24"
+                >
+                    {/* Header */}
+                    <div className="mb-24 border-b border-black/10 pb-12">
+                        <motion.h1
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ duration: 0.8 }}
+                            className="font-serif text-5xl md:text-8xl mb-8"
+                        >
+                            The Belief.
+                        </motion.h1>
+                        <motion.p
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.2, duration: 0.8 }}
+                            className="text-xl md:text-2xl font-light max-w-2xl leading-relaxed text-[#1A1A1A]/80"
+                        >
+                            We are building for the post-algorithmic era. Where human connection is the only currency that matters.
+                        </motion.p>
+                    </div>
+
+                    {/* Manifesto Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mb-32">
+                        <div className="md:col-span-12">
+                            <RevealText>
+                                <h2 className="text-3xl md:text-5xl font-serif leading-tight mb-8">
+                                    In a world of infinite noise,<br />
+                                    <span className="italic opacity-60">clarity is a radical act.</span>
+                                </h2>
+                            </RevealText>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 font-light text-lg leading-relaxed text-[#1A1A1A]/80">
+                                <RevealText delay={0.2}>
+                                    <p className="mb-6">Most agencies are built for an internet that no longer exists. They treat social media as a distribution channel, filling pipes with "content" hoping something sticks. We believe this is a race to the bottom.</p>
+                                    <p>Storyflow was founded on a simple premise: <strong>Culture moves faster than strategy.</strong> To win today, brands must stop interrupting culture and start contributing to it.</p>
+                                </RevealText>
+                                <RevealText delay={0.4}>
+                                    <p className="mb-6">We prioritize <strong>living ecosystems</strong> over singular viral moments. A viral video is luck; a growing community is design. We build the engines that allow brands to show up consistently, authentically, and creatively.</p>
+                                    <p>We don't just optimize for clicks. We optimize for memory.</p>
+                                </RevealText>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Core Values */}
+                    <div className="space-y-24">
+                        <ValueSection
+                            number="01"
+                            title="Emotion before Interface."
+                            desc="Screens are cold. Stories are warm. We design every interaction to feel human, tactile, and emotional. If it doesn't make you feel, it doesn't work."
+                        />
+                        <ValueSection
+                            number="02"
+                            title="Culture over Trends."
+                            desc="Trends are fleeting sugar rushes. Culture is a slow-cooked meal. We focus on the deep currents of cultural change, not just the waves on the surface."
+                        />
+                        <ValueSection
+                            number="03"
+                            title="Systematic Soul."
+                            desc="Creativity needs structure to scale. We build rigid systems that allow for fluid expression. It's not about choosing between art and efficiency; it's about engineering art."
+                        />
+                    </div>
+
+                    {/* Bottom CTA */}
+                    <div className="mt-32 text-center border-t border-black/10 pt-24">
+                        <h3 className="font-serif text-4xl md:text-5xl mb-8">Believe in this?</h3>
+                        <button onClick={() => navigateTo('services')} className="text-lg border-b border-black pb-1 hover:opacity-60 transition-opacity">
+                            See how we work
+                        </button>
+                    </div>
+                </motion.div>
+            )
+        }
+
+        const ServicesPage = ({ navigateTo }) => {
+            // Default image is an abstract texture
+            const [activeImage, setActiveImage] = useState("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop");
+
+            const services = [
+                {
+                    id: "01",
+                    title: "Visual Identity",
+                    tagline: "Brand DNA for the scroll.",
+                    description: "We adapt your brand for the vertical screen without losing its soul. We create design systems that are flexible enough for creators but strict enough to maintain premium equity.",
+                    deliverables: ["Social Playbooks", "Motion Guidelines", "Template Systems", "Art Direction"],
+                    image: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2000&auto=format&fit=crop"
+                },
+                {
+                    id: "02",
+                    title: "Content Systems",
+                    tagline: "Scale without sacrifice.",
+                    description: "High-volume output usually means low-quality creative. We break that rule. We build bespoke production engines that maintain editorial standards at algorithmic scale.",
+                    deliverables: ["Short-form Video", "UGC Management", "Post-Production", "Asset Management"],
+                    image: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=2000&auto=format&fit=crop"
+                },
+                {
+                    id: "03",
+                    title: "Creator Networks",
+                    tagline: "Authentic voices, curated.",
+                    description: "People trust people. We don't just 'hire influencers.' We curate networks of brand ambassadors who actually understand your narrative.",
+                    deliverables: ["Casting & Vetting", "Briefing Strategy", "Rights Management", "Community seeding"],
+                    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=2000&auto=format&fit=crop"
+                },
+                {
+                    id: "04",
+                    title: "Cultural Strategy",
+                    tagline: "Decoding the now.",
+                    description: "We move beyond trend-watching. We analyze the deep currents of culture to position your brand where the conversation is going, ensuring relevance that outlasts the feed.",
+                    deliverables: ["Trend Reporting", "Niche Identification", "Competitor Analysis", "Platform Strategy"],
+                    image: "https://images.unsplash.com/photo-1519750157634-b6d493a0f77c?q=80&w=2000&auto=format&fit=crop"
+                }
+            ];
+
+            return (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="pt-32 px-6 md:px-12 max-w-7xl mx-auto pb-24"
+                >
+                    {/* Header */}
+                    <div className="mb-24 border-b border-black/10 pb-12">
+                        <motion.h1
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ duration: 0.8 }}
+                            className="font-serif text-5xl md:text-8xl mb-8"
+                        >
+                            The Ecosystem.
+                        </motion.h1>
+                        <motion.p
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.2, duration: 0.8 }}
+                            className="text-xl md:text-2xl font-light max-w-2xl leading-relaxed text-[#1A1A1A]/80"
+                        >
+                            Our services are modular. Take the whole engine, or just the parts you need to accelerate.
+                        </motion.p>
+                    </div>
+
+                    {/* Interactive Split Layout */}
+                    <div className="flex flex-col lg:flex-row gap-12 relative">
+                        {/* Left Column: List */}
+                        <div className="w-full lg:w-1/2 space-y-8 pb-24">
+                            {services.map((service, index) => (
+                                <ServiceItem
+                                    key={service.id}
+                                    service={service}
+                                    index={index}
+                                    onHover={() => setActiveImage(service.image)}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Right Column: Sticky Image Reveal (Desktop Only) */}
+                        <div className="hidden lg:block w-1/2 relative">
+                            <div className="sticky top-32 w-full h-[600px] overflow-hidden rounded-sm bg-stone-100">
+                                <AnimatePresence mode="wait">
+                                    <motion.img
+                                        key={activeImage}
+                                        src={activeImage}
+                                        initial={{ opacity: 0, scale: 1.05 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.6, ease: "easeOut" }}
+                                        className="absolute inset-0 w-full h-full object-cover"
+                                        alt="Service visualization"
+                                    />
+                                </AnimatePresence>
+                                <div className="absolute inset-0 bg-black/5" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Bottom CTA */}
+                    <div className="mt-12 text-center border-t border-black/10 pt-24">
+                        <h3 className="font-serif text-4xl md:text-5xl mb-8">Ready to build?</h3>
+                        <button onClick={() => navigateTo('contact')} className="text-lg border-b border-black pb-1 hover:opacity-60 transition-opacity">
+                            Book a consultation
+                        </button>
+                    </div>
+                </motion.div>
+            );
+        };
+
+        const HomePage = ({ navigateTo }) => {
+            return (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    {/* Hero Section */}
+                    <header className="relative w-full h-screen flex flex-col justify-center items-start px-6 md:px-12 pt-20">
+                        <div className="max-w-6xl w-full mx-auto">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 1, delay: 0.2 }}
+                                className="absolute top-1/4 right-6 md:right-12 w-32 h-32 md:w-64 md:h-64 rounded-full bg-stone-100 blur-3xl opacity-60 pointer-events-none"
+                            />
+
+                            <motion.h1
+                                initial={{ opacity: 0, y: 40 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+                                className="font-serif text-5xl md:text-8xl lg:text-9xl leading-[1.1] text-[#1A1A1A] mb-12"
+                            >
+                                <span className="block italic font-light opacity-80">Culture</span>
+                                <span className="block ml-4 md:ml-12">is not static.</span>
+                                <span className="block text-right mr-4 md:mr-12">Neither is</span>
+                                <span className="block text-right">your brand.</span>
+                            </motion.h1>
+
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 1, delay: 0.8 }}
+                                className="flex flex-col md:flex-row justify-between items-end w-full border-t border-black/10 pt-8 mt-12"
+                            >
+                                <p className="text-sm uppercase tracking-widest opacity-50 mb-4 md:mb-0">
+                                    International Social-First Creative Agency
+                                </p>
+                                <div className="max-w-md text-lg md:text-xl font-light leading-relaxed">
+                                    We build living ecosystems for brands in a social-first world.
+                                    Always on. Human driven. Culturally deeply rooted.
+                                </div>
+                            </motion.div>
+                        </div>
+                    </header>
+
+                    {/* Editorial Image Interlude */}
+                    <section className="w-full h-[60vh] md:h-[80vh] overflow-hidden relative">
+                        <ParallaxImage src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop" alt="Abstract fluid texture" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                whileInView={{ opacity: 1, scale: 1 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.8 }}
+                                className="bg-white/10 backdrop-blur-md px-8 py-4 border border-white/20 text-white font-serif text-2xl md:text-4xl italic"
+                            >
+                                Emotion before interface.
+                            </motion.div>
+                        </div>
+                    </section>
+
+                    {/* Philosophy */}
+                    <section id="philosophy" className="py-24 md:py-40 px-6 md:px-12 max-w-7xl mx-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
+                            <div className="md:col-span-4">
+                                <RevealText>
+                                    <h2 className="text-sm uppercase tracking-widest font-medium opacity-50 mb-2">Our Philosophy</h2>
+                                    <div className="h-[1px] w-12 bg-black/30 mt-4"></div>
+                                </RevealText>
+                            </div>
+                            <div className="md:col-span-8">
+                                <RevealText delay={0.2}>
+                                    <p className="font-serif text-3xl md:text-5xl leading-tight mb-12">
+                                        We are not transactional. <br />
+                                        We are the architects of momentum.
+                                    </p>
+                                </RevealText>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 font-light text-lg leading-relaxed text-[#1A1A1A]/80 mb-8">
+                                    <RevealText delay={0.4}>
+                                        <p className="mb-6">
+                                            In a fragmented digital landscape, brands often lose their soul to algorithms.
+                                            We believe in the opposite. We believe that when you prioritize human
+                                            connection and cultural intelligence, the algorithm follows you.
+                                        </p>
+                                    </RevealText>
+                                    <RevealText delay={0.6}>
+                                        <p>
+                                            Storyflow operates at the intersection of brand identity and social culture.
+                                            We don't just make "content." We build narrative worlds that people want
+                                            to live in.
+                                        </p>
+                                    </RevealText>
+                                </div>
+                                <RevealText delay={0.8}>
+                                    <button onClick={() => navigateTo('philosophy')} className="text-sm border-b border-black pb-1 hover:opacity-60 transition-opacity">Read full manifesto</button>
+                                </RevealText>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Methodology Highlight */}
+                    <section className="py-20 px-6 md:px-12 bg-[#F5F5F0]">
+                        <div className="max-w-7xl mx-auto mb-20 flex justify-between items-end">
+                            <h2 className="text-sm uppercase tracking-widest font-medium opacity-50">The Methodology</h2>
+                            <button onClick={() => navigateTo('services')} className="hidden md:block border-b border-black text-sm pb-1 hover:opacity-50 transition-opacity">View all services</button>
+                        </div>
+
+                        <div className="max-w-7xl mx-auto space-y-32">
+                            {/* Pillar 1 */}
+                            <div className="flex flex-col md:flex-row items-center gap-12 md:gap-24">
+                                <div className="w-full md:w-1/2 aspect-[4/5] relative overflow-hidden group">
+                                    <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=2000&auto=format&fit=crop" alt="Fashion editorial" className="object-cover w-full h-full transition-transform duration-1000 group-hover:scale-105" />
+                                </div>
+                                <div className="w-full md:w-1/2">
+                                    <RevealText>
+                                        <span className="text-xs font-bold border border-black/20 rounded-full px-3 py-1 mb-6 inline-block">01</span>
+                                        <h3 className="font-serif text-4xl md:text-6xl mb-6">Cultural Intelligence</h3>
+                                        <p className="text-lg font-light opacity-70 max-w-sm">We don't guess what's trending. We analyze the undercurrents of culture to position your brand where the conversation is going.</p>
+                                    </RevealText>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-20 text-center md:hidden">
+                            <button onClick={() => navigateTo('services')} className="border-b border-black text-sm pb-1">View all services</button>
+                        </div>
+                    </section>
+
+                    {/* Services Teaser */}
+                    <section className="py-24 md:py-40 px-6 md:px-12 bg-[#1A1A1A] text-[#FDFCF8] relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                            <div className="absolute top-[-50%] left-[-20%] w-[80%] h-[80%] bg-purple-900 blur-[120px] rounded-full mix-blend-screen" />
+                            <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-orange-900 blur-[100px] rounded-full mix-blend-screen" />
+                        </div>
+
+                        <div className="max-w-7xl mx-auto relative z-10">
+                            <div className="flex flex-col md:flex-row justify-between items-start mb-20">
+                                <h2 className="font-serif text-4xl md:text-6xl">The Ecosystem</h2>
+                                <p className="text-sm uppercase tracking-widest mt-4 md:mt-2 opacity-60">What we build</p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-white/10 pt-12">
+                                <ServiceCard title="Visual Identity" desc="Translating brand DNA into visual language." />
+                                <ServiceCard title="Content Systems" desc="High-volume, high-quality video engines." />
+                                <ServiceCard title="Cultural Strategy" desc="Decoding trends to find sustainable relevance." />
+                            </div>
+                            <div className="mt-12 text-center">
+                                <button onClick={() => navigateTo('services')} className="inline-flex items-center gap-2 border border-white/20 rounded-full px-6 py-3 hover:bg-white hover:text-black transition-all">
+                                    Explore the full ecosystem <ArrowRight size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* CTA Section */}
+                    <section className="min-h-[80vh] flex flex-col justify-center items-center text-center px-6 relative">
+                        <RevealText>
+                            <p className="text-sm uppercase tracking-widest opacity-50 mb-8">This feels right</p>
+                            <h2 className="font-serif text-5xl md:text-8xl mb-12">
+                                Ready to find <br /> <span className="italic opacity-60">your flow?</span>
+                            </h2>
+                            <button onClick={() => navigateTo('contact')} className="group relative inline-flex items-center gap-4 text-xl md:text-2xl font-light border-b border-black pb-2 hover:opacity-70 transition-all">
+                                Start the conversation
+                                <ArrowRight className="w-6 h-6 transform group-hover:translate-x-2 transition-transform duration-300" />
+                            </button>
+                        </RevealText>
+                    </section>
+                </motion.div>
+            );
+        };
+
+        // --- APP ROOT ---
+
+        const Storyflow = () => {
+            const [isMenuOpen, setIsMenuOpen] = useState(false);
+            const [view, setView] = useState('home'); // 'home' | 'services' | 'philosophy' | 'contact'
+            const { scrollYProgress } = useScroll();
+            const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+
+            const navigateTo = (page) => {
+                setIsMenuOpen(false);
+                if (view !== page) {
+                    window.scrollTo({ top: 0, behavior: 'auto' }); // Reset scroll
+                    setView(page);
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-[#FDFCF8] text-[#1A1A1A] font-sans selection:bg-black selection:text-white overflow-x-hidden relative">
+                    <div className="noise-overlay" />
+                    <motion.div className="fixed top-0 left-0 right-0 h-1 bg-black z-50 origin-left" style={{ scaleX }} />
+
+                    <nav className="fixed top-0 left-0 w-full z-40 px-6 py-6 md:px-12 md:py-8 flex justify-between items-center bg-[#FDFCF8]/95 backdrop-blur-sm text-[#1A1A1A]">
+                        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="text-lg font-medium tracking-tight z-50 cursor-pointer" onClick={() => navigateTo('home')}>Storyflow.</motion.div>
+                        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.1 }} className="z-50">
+                            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="group flex items-center gap-2 text-sm uppercase tracking-widest hover:opacity-60 transition-opacity">
+                                <span className="hidden md:block">{isMenuOpen ? 'Close' : 'Menu'}</span>
+                                <div className="w-8 h-8 flex items-center justify-center relative">{isMenuOpen ? <X size={20} /> : <Menu size={20} />}</div>
+                            </button>
+                        </motion.div>
+                    </nav>
+
+                    <MenuOverlay isOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} navigateTo={navigateTo} />
+
+                    <AnimatePresence mode="wait">
+                        {view === 'home' && <HomePage key="home" navigateTo={navigateTo} />}
+                        {view === 'services' && <ServicesPage key="services" navigateTo={navigateTo} />}
+                        {view === 'philosophy' && <PhilosophyPage key="philosophy" navigateTo={navigateTo} />}
+                        {view === 'contact' && <ContactPage key="contact" navigateTo={navigateTo} />}
+                    </AnimatePresence>
+
+                    <footer className="bg-[#111] text-[#888] py-12 px-6 md:px-12 text-sm mt-auto">
+                        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                            <div className="flex flex-col gap-2"><span className="text-white font-medium tracking-tight text-lg">Storyflow.</span><span>London • New York • Lagos</span></div>
+                            <div className="flex gap-8"><a href="#" className="hover:text-white transition-colors">Instagram</a><a href="#" className="hover:text-white transition-colors">LinkedIn</a><a href="#" className="hover:text-white transition-colors">TikTok</a></div>
+                            <div className="text-xs opacity-40">© {new Date().getFullYear()} Storyflow Agency. All rights reserved.</div>
+                        </div>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Storyflow />);
+    </script>
+</body>
+
+</html>
